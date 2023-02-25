@@ -5,7 +5,9 @@
     ],
     "jsRules": {},
     "rules": {
-        "max-classes-per-file": false
+        "max-classes-per-file": false,
+        "semicolon": true,
+        "no-empty-interface": false
     },
     "rulesDirectory": []
 }
