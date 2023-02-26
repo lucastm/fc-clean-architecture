@@ -1,7 +1,10 @@
 import { app, sequelize } from "../express";
 import request from "supertest";
+import ProductRepository from "../../product/repository/sequelize/product.repository";
+import Product from "../../../domain/product/entity/product";
+import { v4 as uuid } from "uuid";
 
-describe("E2E test for customer", () => {
+describe("E2E test for product", () => {
   beforeEach(async () => {
     await sequelize.sync({ force: true });
   });
@@ -10,93 +13,58 @@ describe("E2E test for customer", () => {
     await sequelize.close();
   });
 
-  it("should create a customer", async () => {
+  it("should create a product", async () => {
     const response = await request(app)
-      .post("/customer")
+      .post("/product")
       .send({
-        name: "John",
-        address: {
-          street: "Street",
-          city: "City",
-          number: 123,
-          zip: "12345",
-        },
+        name: "testProduct",
+        price: 100
       });
 
     expect(response.status).toBe(200);
-    expect(response.body.name).toBe("John");
-    expect(response.body.address.street).toBe("Street");
-    expect(response.body.address.city).toBe("City");
-    expect(response.body.address.number).toBe(123);
-    expect(response.body.address.zip).toBe("12345");
+    expect(response.body.name).toBe("testProduct");
+    expect(response.body.price).toBe(100);
   });
 
-  it("should not create a customer", async () => {
-    const response = await request(app).post("/customer").send({
-      name: "john",
+  it("should not create a product", async () => {
+    const response = await request(app).post("/product").send({
+      name: "testProduct",
     });
     expect(response.status).toBe(500);
   });
 
-  it("should list all customer", async () => {
-    const response = await request(app)
-      .post("/customer")
-      .send({
-        name: "John",
-        address: {
-          street: "Street",
-          city: "City",
-          number: 123,
-          zip: "12345",
-        },
-      });
-    expect(response.status).toBe(200);
-    const response2 = await request(app)
-      .post("/customer")
-      .send({
-        name: "Jane",
-        address: {
-          street: "Street 2",
-          city: "City 2",
-          number: 1234,
-          zip: "12344",
-        },
-      });
-    expect(response2.status).toBe(200);
+  it("should list all product", async () => {
+    const productRepository = new ProductRepository();
+    const product1 = new Product(uuid(), "testProduct", 100);
+    const product2 = new Product(uuid(), "testProduct2", 200);
+    await productRepository.create(product1);
+    await productRepository.create(product2);
 
-    const listResponse = await request(app).get("/customer").send();
+    const listResponse = await request(app).get("/product").send();
 
     expect(listResponse.status).toBe(200);
-    expect(listResponse.body.customers.length).toBe(2);
-    const customer = listResponse.body.customers[0];
-    expect(customer.name).toBe("John");
-    expect(customer.address.street).toBe("Street");
-    const customer2 = listResponse.body.customers[1];
-    expect(customer2.name).toBe("Jane");
-    expect(customer2.address.street).toBe("Street 2");
+    expect(listResponse.body.products.length).toBe(2);
+    const productResponse = listResponse.body.products[0];
+    expect(productResponse.name).toBe("testProduct");
+    expect(productResponse.price).toBe(100);
+    const product2Response = listResponse.body.products[1];
+    expect(product2Response.name).toBe("testProduct2");
+    expect(product2Response.price).toBe(200);
 
     const listResponseXML = await request(app)
-    .get("/customer")
+    .get("/product")
     .set("Accept", "application/xml")
     .send();
 
     expect(listResponseXML.status).toBe(200);
     expect(listResponseXML.text).toContain(`<?xml version="1.0" encoding="UTF-8"?>`);
-    expect(listResponseXML.text).toContain(`<customers>`);
-    expect(listResponseXML.text).toContain(`<customer>`);
-    expect(listResponseXML.text).toContain(`<name>John</name>`);
-    expect(listResponseXML.text).toContain(`<address>`);
-    expect(listResponseXML.text).toContain(`<street>Street</street>`);
-    expect(listResponseXML.text).toContain(`<city>City</city>`);
-    expect(listResponseXML.text).toContain(`<number>123</number>`);
-    expect(listResponseXML.text).toContain(`<zip>12345</zip>`);
-    expect(listResponseXML.text).toContain(`</address>`);
-    expect(listResponseXML.text).toContain(`</customer>`);
-    expect(listResponseXML.text).toContain(`<name>Jane</name>`);
-    expect(listResponseXML.text).toContain(`<street>Street 2</street>`);
-    expect(listResponseXML.text).toContain(`</customers>`);
-    
-
-    
+    expect(listResponseXML.text).toContain(`<products>`);
+    expect(listResponseXML.text).toContain(`<product>`);
+    expect(listResponseXML.text).toContain(`<name>testProduct</name>`);
+    expect(listResponseXML.text).toContain(`<price>100</price>`);
+    expect(listResponseXML.text).toContain(`</product>`);
+    expect(listResponseXML.text).toContain(`<name>testProduct2</name>`);
+    expect(listResponseXML.text).toContain(`<price>200</price>`);
+    expect(listResponseXML.text).toContain(`</products>`);
   });
 });
